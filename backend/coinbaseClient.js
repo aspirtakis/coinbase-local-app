@@ -1,0 +1,14 @@
+const { RESTClient } = require('../advanced-sdk-ts/dist/rest'); // Adjust path as needed
+
+// Replace with your actual API credentials
+const keys = {
+  "name": "organizations/0dd6ee11-0100-4223-ae4b-b1a7a47ed36a/apiKeys/7cfff769-62d2-44cc-8cbe-07eaa7cd2a31",
+  "privateKey": "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIJQ6B1UFZtXcEqkrZ6aMH/IOzYVsbWVQNpj9F08mgAk2oAoGCCqGSM49\nAwEHoUQDQgAEA5qlLpTZuz7sEQPJT+N218o5M+HjDYoeeT5REGUrnFVDk7Yy9SX3\ntNtFelGWF+JBQtRkcG6Uq9GacH8ytfFdfA==\n-----END EC PRIVATE KEY-----\n"
+}
+const API_KEY = keys.name;
+const API_SECRET = keys.privateKey;
+
+// Initialize the Coinbase RESTClient
+const client = new RESTClient(API_KEY, API_SECRET);
+
+module.exports = client;
