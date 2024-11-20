@@ -13,6 +13,21 @@ export const fetchAccounts = async () => {
   }
 };
 
+export const listProducts = async () => {
+  try {
+    const response = await fetch(ENDPOINTS.LISTPRODUCT);
+    if (!response.ok) throw new Error(`Error fetching price for`);
+    const res = await response.json();
+    const data = JSON.parse(res)
+
+    return data;
+  } catch (err) {
+    console.error(`Error fetching price for `, err.message);
+    return 0; // Fallback price
+  }
+};
+
+
 export const fetchPrice = async (symbol) => {
   try {
     const response = await fetch(`${ENDPOINTS.PRODUCT}/${symbol}`);
@@ -26,12 +41,19 @@ export const fetchPrice = async (symbol) => {
   }
 };
 
-export const fetchCandleData = async (pair ,timeframe) => {
-console.log(pair)
+export const fetchCandleData = async (pair, timeframe) => {
+  const excludeList = ['USDC-USDC', 'EUR-USDC',"EUR-USD"]; // List of pairs to exclude
+
+  if (excludeList.includes(pair)) {
+    console.warn(`Pair "${pair}" is excluded from fetching candle data.`);
+    return [];
+  }
+
   try {
-    const response = await fetch("http://localhost:4000/api/candles/"+pair+"?granularity="+timeframe);
-    if (!response.ok) throw new Error(`Error fetching candles for timeframe ${timeframe}`);
+    const response = await fetch(`http://localhost:4000/api/candles/${pair}?granularity=${timeframe}`);
+    if (!response.ok) throw new Error(`Error fetching candles for pair ${pair} and timeframe ${timeframe}`);
     const data = await response.json();
+
     // Transform data to match chart.js candlestick format
     return data.map((candle) => ({
       time: candle.time, // X-axis label
@@ -43,5 +65,49 @@ console.log(pair)
   } catch (err) {
     console.error(`Error fetching candlestick data: ${err.message}`);
     return [];
+  }
+};
+
+
+export const fetchOrdersForPair = async (productId) => {
+
+  try {
+    const response = await fetch(`${ENDPOINTS.ORDERS}/${productId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch orders for pair: ${productId}`);
+    }
+    const data = await response.json();
+    return data; // Assuming the response includes the `fills` array
+  } catch (error) {
+    console.error(`Error fetching orders for ${productId}:`, error.message);
+    throw error;
+  }
+};
+
+export const handleTrade = async (baseCurrency, side, size,price) => {
+  const product_id = baseCurrency;
+
+
+  try {
+    const response = await fetch(ENDPOINTS.CREATEORDER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id,
+        side,
+        size,
+        price
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create order');
+    }
+
+    const order = await response.json();
+    const parsed = JSON.parse(order)
+    return parsed
+  } catch (error) {
+    console.error('Error executing trade:', error.message);
   }
 };

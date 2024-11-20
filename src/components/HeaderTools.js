@@ -46,13 +46,13 @@ const HeaderTools = ({ accounts ,selectedPair}) => {
        
       <Col sm="4">
       Total Balance $: {Number(totalBalance).toFixed(2)}
-        <ReactECharts option={pieOption} style={{ height: 300 }} />
+        <ReactECharts option={pieOption} style={{ height: 200 }} />
       </Col>
 
       <Col sm="8">
               {/* Candlestick Chart */}
               {selectedPair ? (
-                <CandlestickChart pair={selectedPair} />
+                <CandlestickChart  pair={selectedPair} />
               ) : (
                 <p>Select a currency pair from the table to view its candlestick chart.</p>
               )}

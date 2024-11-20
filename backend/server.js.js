@@ -1,17 +1,28 @@
 const express = require('express');
 const cors = require('cors');
 const client = require('./coinbaseClient'); // Import the reusable Coinbase client
-
+const { v4: uuidv4 } = require('uuid');
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-
+app.use(express.urlencoded({ extended: true }));
 
 // Endpoint to fetch account data
 app.get('/api/accounts', async (req, res) => {
   try {
     const accounts = await client.listAccounts({});
+    res.json(accounts);
+  } catch (error) {
+    console.error('Error fetching accounts:', error.message);
+    res.status(500).json({ error: 'Failed to fetch accounts' });
+  }
+});
+
+app.get('/api/listproducts', async (req, res) => {
+  try {
+    const accounts = await client.listProducts({product_type:"SPOT"});
+    console.log(accounts)
     res.json(accounts);
   } catch (error) {
     console.error('Error fetching accounts:', error.message);
@@ -38,9 +49,11 @@ app.get('/api/candles/:productId', async (req, res) => {
 
   const GRANULARITY_MAP = {
     60: 'ONE_MINUTE',
-    300: 'FIVE_MINUTES',
-    900: 'FIFTEEN_MINUTES',
+    300: 'FIVE_MINUTE',
+    900: 'FIFTEEN_MINUTE',
+    1800: 'THIRTY_MINUTE',
     3600: 'ONE_HOUR',
+    21600: 'SIX_HOUR',
     86400: 'ONE_DAY',
   };
 
@@ -64,7 +77,6 @@ app.get('/api/candles/:productId', async (req, res) => {
       end: end.toString(),
     });
 
-    console.log('Raw response from SDK:', rawResponse);
 
     // Parse and process the response
     let candles = [];
@@ -96,7 +108,64 @@ app.get('/api/candles/:productId', async (req, res) => {
   }
 });
 
+app.get('/api/orders/:product_id', async (req, res) => {
+  const { product_id } = req.params;
 
+  try {
+    const trades = await client.listFills({ product_id });
+    res.json(JSON.parse(trades));
+  } catch (error) {
+    console.error(`Error fetching trades for ${product_id}:`, error.message);
+    res.status(500).json({ error: 'Failed to fetch trades' });
+  }
+});
+
+
+
+
+
+app.post('/api/create-order',async (req, res) => {
+  const { product_id, side, size, price } = req.body;
+
+  if (!product_id || !side || !size) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+
+
+  const client_order_id =  uuidv4(); // Generate a unique ID for the order
+  const orderConfiguration =
+    side === 'SELL'
+      ? {
+          market_market_ioc: {
+            base_size: size, // Use base size for market sell
+          },
+        }
+      : {
+          market_market_ioc: {
+            quote_size: size, // Use quote size for market buy
+          },
+        };
+  // console.log(client_order_id)
+  // console.log(orderConfiguration)
+  // console.log(product_id)
+  // console.log(side)
+  // console.log(size)
+  // console.log(price)
+
+  try {
+    const order = await client.createOrder({
+      client_order_id,
+      product_id,
+      side,
+      order_configuration: orderConfiguration,
+    });
+    res.status(200).json(order); // Return the created order
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+
+});
 
 
 // Start server

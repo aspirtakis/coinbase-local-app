@@ -1,7 +1,58 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, FormGroup, Label, Input, Button } from 'reactstrap';
+import { handleTrade } from '../api/apiCalls';
+import NotificationToast from './ToastNotificator';
+const TradePanel = ({ tradeDetails ,refresh}) => {
+  const [currentTrade, setCurrentTrade] = useState(tradeDetails);
+  const [toast, setToast] = useState({ visible: false, message: '', status: '' }); // Toast state
 
-const TradePanel = ({ tradeDetails, handleInputChange, executeTrade }) => {
+  // Sync local state with tradeDetails prop when it changes
+  useEffect(() => {
+    setCurrentTrade(tradeDetails);
+  }, [tradeDetails]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCurrentTrade((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const executeTrade = async (side) => {
+    const { pair, amount } = currentTrade;
+
+    try {
+      const response = await handleTrade(pair, side, amount);
+       console.log(response)
+      if (response.success) {
+        setToast({
+          visible: true,
+          message: `Trade executed successfully! Order ID: ${response.success_response.order_id}`,
+          status: 'success',
+        });
+        // Reset fields
+        setCurrentTrade({ pair: '', amount: '' });
+        refresh()
+      } else {
+        setToast({
+          visible: true,
+          message: 'Trade execution failed.',
+          status: 'error',
+        });
+        refresh()
+      }
+    } catch (error) {
+      setToast({
+        visible: true,
+        message: 'An error occurred while executing the trade.',
+        status: 'error',
+      });
+      refresh()
+      console.error(error);
+    }
+  };
+
   return (
     <div>
       <h5>Trade Panel</h5>
@@ -12,8 +63,8 @@ const TradePanel = ({ tradeDetails, handleInputChange, executeTrade }) => {
             type="text"
             name="pair"
             id="pair"
-            value={tradeDetails.pair}
-            readOnly
+            value={currentTrade?.pair || ''}
+            onChange={handleInputChange}
           />
         </FormGroup>
         <FormGroup>
@@ -23,7 +74,7 @@ const TradePanel = ({ tradeDetails, handleInputChange, executeTrade }) => {
             name="amount"
             id="amount"
             placeholder="Enter amount"
-            value={tradeDetails.amount}
+            value={currentTrade?.amount || ''}
             onChange={handleInputChange}
           />
         </FormGroup>
@@ -34,6 +85,14 @@ const TradePanel = ({ tradeDetails, handleInputChange, executeTrade }) => {
           BUY
         </Button>
       </Form>
+
+      {/* Toast for notifications */}
+      <NotificationToast
+        message={toast.message}
+        status={toast.status}
+        visible={toast.visible}
+        onClose={() => setToast({ visible: false, message: '', status: '' })}
+      />
     </div>
   );
 };
