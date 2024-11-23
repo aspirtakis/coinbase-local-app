@@ -77,7 +77,7 @@ export const fetchCandleData = async (pair, timeframe, delayMs = 250) => {
   }
   try {
     await delay(delayMs); // Introduce a delay before making the API call
-    const response = await fetch(`http://localhost:4000/api/candles/${pair}?granularity=${timeframe}`);
+    const response = await fetch(`http://192.168.1.22:4000/api/candles/${pair}?granularity=${timeframe}`);
     if (!response.ok) throw new Error(`Error fetching candles for pair ${pair} and timeframe ${timeframe}`);
     const data = await response.json();
     return data.map((candle) => ({

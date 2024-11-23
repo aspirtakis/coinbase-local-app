@@ -7,51 +7,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const { calculateADX } = require('./indicators/adx'); // Import ADX logic
-
-const fetchCandleData = async (pair, granularity) => {
-  try {
-    const response = await fetch(
-      `http://localhost:4000/api/candles/${pair}?granularity=${granularity}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch candles for ${pair} with granularity ${granularity}`);
-    }
-
-    const candles = await response.json();
-    return candles;
-  } catch (error) {
-    console.error(`Error fetching candles: ${error.message}`);
-    throw error;
-  }
-};
-
-// ADX API endpoint
-app.get('/api/adx', async (req, res) => {
-  const { pair, granularity } = req.query;
-  if (!pair || !granularity) {
-    return res.status(400).json({ error: 'Missing required parameters: pair, granularity.' });
-  }
-
-  try {
-    // Fetch candles for the given pair and granularity
-    const candles = await fetchCandleData(pair, granularity);
-
-    if (!candles || candles.length === 0) {
-      return res.status(404).json({ error: 'No candle data found.' });
-    }
-
-    // Calculate ADX
-    const adx = await calculateADX(candles);
-
-    // Return the ADX value
-    res.json({ pair, granularity, adx });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 
 
 // Endpoint to fetch account data
