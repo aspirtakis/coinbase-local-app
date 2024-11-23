@@ -1,12 +1,58 @@
 const express = require('express');
 const cors = require('cors');
 const client = require('./coinbaseClient'); // Import the reusable Coinbase client
+
 const { v4: uuidv4 } = require('uuid');
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
+const { calculateADX } = require('./indicators/adx'); // Import ADX logic
+
+const fetchCandleData = async (pair, granularity) => {
+  try {
+    const response = await fetch(
+      `http://localhost:4000/api/candles/${pair}?granularity=${granularity}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch candles for ${pair} with granularity ${granularity}`);
+    }
+
+    const candles = await response.json();
+    return candles;
+  } catch (error) {
+    console.error(`Error fetching candles: ${error.message}`);
+    throw error;
+  }
+};
+
+// ADX API endpoint
+app.get('/api/adx', async (req, res) => {
+  const { pair, granularity } = req.query;
+  if (!pair || !granularity) {
+    return res.status(400).json({ error: 'Missing required parameters: pair, granularity.' });
+  }
+
+  try {
+    // Fetch candles for the given pair and granularity
+    const candles = await fetchCandleData(pair, granularity);
+
+    if (!candles || candles.length === 0) {
+      return res.status(404).json({ error: 'No candle data found.' });
+    }
+
+    // Calculate ADX
+    const adx = await calculateADX(candles);
+
+    // Return the ADX value
+    res.json({ pair, granularity, adx });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 
 // Endpoint to fetch account data
 app.get('/api/accounts', async (req, res) => {
@@ -22,7 +68,6 @@ app.get('/api/accounts', async (req, res) => {
 app.get('/api/listproducts', async (req, res) => {
   try {
     const accounts = await client.listProducts({product_type:"SPOT"});
-    console.log(accounts)
     res.json(accounts);
   } catch (error) {
     console.error('Error fetching accounts:', error.message);
@@ -67,7 +112,6 @@ app.get('/api/candles/:productId', async (req, res) => {
     const end = now;
     const start = now - parseInt(granularity, 10) * 300;
 
-    console.log('Fetching candles with:', { productId, start, end, granularity: granularityString });
 
     // Fetch candles
     const rawResponse = await client.getPublicProductCandles({
@@ -120,8 +164,17 @@ app.get('/api/orders/:product_id', async (req, res) => {
   }
 });
 
-
-
+app.get('/api/bidask/:product_id', async (req, res) => {
+  const { product_id } = req.params;
+  try {
+    const trades = await client.getProductBook({ product_id });
+    console.log(trades)
+    res.json(JSON.parse(trades));
+  } catch (error) {
+    console.error(`Error fetching trades for ${product_id}:`, error.message);
+    res.status(500).json({ error: 'Failed to fetch trades' });
+  }
+});
 
 
 app.post('/api/create-order',async (req, res) => {
@@ -145,13 +198,6 @@ app.post('/api/create-order',async (req, res) => {
             quote_size: size, // Use quote size for market buy
           },
         };
-  // console.log(client_order_id)
-  // console.log(orderConfiguration)
-  // console.log(product_id)
-  // console.log(side)
-  // console.log(size)
-  // console.log(price)
-
   try {
     const order = await client.createOrder({
       client_order_id,

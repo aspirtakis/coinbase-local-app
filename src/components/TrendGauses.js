@@ -33,7 +33,7 @@ const CompositeTrendGauges = ({ pair }) => {
 
       // Moving Averages Crossover
       const shortMA = SMA.calculate({ period: 9, values: close });
-      const longMA = SMA.calculate({ period: 21, values: close });
+      const longMA = SMA.calculate({ period: 44, values: close });
       const maCrossoverScore =
         shortMA.length && longMA.length
           ? (shortMA[shortMA.length - 1] > longMA[longMA.length - 1] ? 1 : -1) * 50 + 50
@@ -45,9 +45,9 @@ const CompositeTrendGauges = ({ pair }) => {
 
       // Composite Score
       const compositeScore =
-        0.3 * adxScore +
-        0.2 * rsiScore +
-        0.3 * maCrossoverScore +
+        0.6 * adxScore +
+        0.1 * rsiScore +
+        0.1 * maCrossoverScore +
         0.2 * volumeTrendScore;
 
       // Normalize to 0–100

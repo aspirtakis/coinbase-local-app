@@ -33,7 +33,7 @@ const Overview = () => {
 
           if (balance > 0) {
             const [priceUSD, priceEUR] = await Promise.all([
-              fetchPrice(`${currency}-USD`),
+              fetchPrice(`${currency}-USDC`),
               fetchPrice(`${currency}-EUR`),
             ]);
 
@@ -66,53 +66,56 @@ const Overview = () => {
   };
 
   return (
-    <div>
- 
-      {error ? (
-        <p style={{ color: 'red' }}>Error: {error}</p>
-      ) : (
-        <>
-          <div className="mb-4">
-            <h4>Total Account Balance:</h4>
-            <p><strong>USD:</strong> ${totalBalanceUSD.toFixed(2)} -- EURO  €{totalBalanceEUR.toFixed(2)}</p>
-            
-          </div>
-          <Button color="primary" onClick={toggleShowWithBalanceOnly}>
-            {showWithBalanceOnly ? 'Show All Accounts' : 'Show Accounts with Balance'}
-          </Button>
-          <Row className="mt-3">
-            {filteredAccounts.length > 0 ? (
-              filteredAccounts.map((account) => {
-                const balance = parseFloat(account.available_balance.value);
-                const priceUSD = accountPrices[account.currency]?.USD || 0;
-                const priceEUR = accountPrices[account.currency]?.EUR || 0;
-                const balanceUSD = (balance * priceUSD).toFixed(2);
-                const balanceEUR = (balance * priceEUR).toFixed(2);
+    <div >
+    {error ? (
+      <p style={{ color: 'red' }}>Error: {error}</p>
+    ) : (
+      <>
+        <div className="mb-4">
+          <h4>Total Account Balance:</h4>
+          <p>
+            <strong>USD:</strong> ${totalBalanceUSD.toFixed(2)} -- 
+            <strong>EURO:</strong> €{totalBalanceEUR.toFixed(2)}
+          </p>
+        </div>
+        <Button color="primary" onClick={toggleShowWithBalanceOnly}>
+          {showWithBalanceOnly ? 'Show All Accounts' : 'Show Accounts with Balance'}
+        </Button>
+        <div className="full-row mt-3">
+          {filteredAccounts.length > 0 ? (
+            filteredAccounts.map((account) => {
+              const balance = parseFloat(account.available_balance.value);
+              const priceUSD = accountPrices[account.currency]?.USD || 0;
+              const priceEUR = accountPrices[account.currency]?.EUR || 0;
+              const balanceUSD = (balance * priceUSD).toFixed(2);
+              const balanceEUR = (balance * priceEUR).toFixed(2);
 
-                return (
-                  <Col sm="4" key={account.uuid} className="mb-3">
-                    <Card>
-                      <CardBody>
-                        <CardTitle tag="h5">{account.name} ({account.currency})</CardTitle>
-                        <CardText>
-                          <strong>Available Balance:</strong> {balance} {account.currency}
-                        </CardText>
-                        <CardText>
-                          <strong>Balance in USD:</strong> ${balanceUSD} <br />
-                          <strong>Balance in EUR:</strong> €{balanceEUR}
-                        </CardText>
-                      </CardBody>
-                    </Card>
-                  </Col>
-                );
-              })
-            ) : (
-              <p>No accounts to display.</p>
-            )}
-          </Row>
-        </>
-      )}
-    </div>
+              return (
+                <div className="account-col" key={account.uuid}>
+                  <Card className="account-card">
+                    <CardBody>
+                      <CardTitle tag="h5">
+                        {account.name} ({account.currency})
+                      </CardTitle>
+                      <CardText>
+                        <strong>Available Balance:</strong> {balance} {account.currency}
+                      </CardText>
+                      <CardText>
+                        <strong>Balance in USD:</strong> ${balanceUSD} <br />
+                        <strong>Balance in EUR:</strong> €{balanceEUR}
+                      </CardText>
+                    </CardBody>
+                  </Card>
+                </div>
+              );
+            })
+          ) : (
+            <p>No accounts to display.</p>
+          )}
+        </div>
+      </>
+    )}
+  </div>
   );
 };
 

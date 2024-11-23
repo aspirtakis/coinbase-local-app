@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navbar, NavbarBrand, Nav, NavItem, NavLink, Container } from 'reactstrap';
+import './Layout.css'; // Add custom styles here
 
 const Layout = ({ children }) => {
   return (
-    <div>
+    <div className="layout">
       <Navbar color="dark" dark expand="md">
         <NavbarBrand href="/">Alekos</NavbarBrand>
         <Nav className="me-auto" navbar>
@@ -18,7 +19,7 @@ const Layout = ({ children }) => {
           </NavItem>
         </Nav>
       </Navbar>
-      <Container className="mt-4">{children}</Container>
+        <div className='main-content'> {children} </div>
     </div>
   );
 };

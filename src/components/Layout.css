@@ -1,0 +1,14 @@
+.layout-content {
+    display: grid;
+    grid-template-columns: 1fr 3fr 1fr; /* Left, Main, Right columns */
+    gap: 20px; /* Space between columns */
+    padding: 20px; /* Space around the layout */
+  }
+  
+  .main-content {
+    background-color: #fff;
+    padding: 50px;
+    border-radius: 18px;
+    min-height: 500px; /* Adjust based on your content */
+  }
+  

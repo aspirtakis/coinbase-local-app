@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, FormGroup, Label, Input, Button } from 'reactstrap';
+import { Form, FormGroup, Label, Input, Button, Col, Row } from 'reactstrap';
 import { handleTrade } from '../api/apiCalls';
 import NotificationToast from './ToastNotificator';
-const TradePanel = ({ tradeDetails ,refresh}) => {
+const TradePanel = ({ tradeDetails, refresh }) => {
   const [currentTrade, setCurrentTrade] = useState(tradeDetails);
   const [toast, setToast] = useState({ visible: false, message: '', status: '' }); // Toast state
 
@@ -22,9 +22,11 @@ const TradePanel = ({ tradeDetails ,refresh}) => {
   const executeTrade = async (side) => {
     const { pair, amount } = currentTrade;
 
+    const adjustedAmount = amount * 0.2; // Remove 0.1%
+
+
     try {
-      const response = await handleTrade(pair, side, amount);
-       console.log(response)
+      const response = await handleTrade(pair, side, Number(adjustedAmount).toFixed(2));
       if (response.success) {
         setToast({
           visible: true,
@@ -55,43 +57,52 @@ const TradePanel = ({ tradeDetails ,refresh}) => {
 
   return (
     <div>
-      <h5>Trade Panel</h5>
+
       <Form>
         <FormGroup>
-          <Label for="pair">Pair</Label>
-          <Input
-            type="text"
-            name="pair"
-            id="pair"
-            value={currentTrade?.pair || ''}
-            onChange={handleInputChange}
-          />
+          <Row>
+            <Col sm="4">
+              <Label for="pair">Pair</Label>
+              <Input
+                type="text"
+                name="pair"
+                id="pair"
+                value={currentTrade?.pair || ''}
+                onChange={handleInputChange}
+              />
+            </Col>
+            <Col sm="">
+              <Label for="amount">Amount</Label>
+              <Input
+                type="number"
+                name="amount"
+                id="amount"
+                placeholder="Enter amount"
+                value={currentTrade?.amount || ''}
+                onChange={handleInputChange}
+              />
+            </Col>
+            <Col style={{marginTop:30}} sm="2">
+              <Button color="danger" onClick={() => executeTrade('SELL')}>
+                SELL
+              </Button>
+
+            </Col>
+            <Col  style={{marginTop:30}} sm="2">        <Button color="success" onClick={() => executeTrade('BUY')}>
+              BUY
+            </Button></Col>
+          </Row>
         </FormGroup>
-        <FormGroup>
-          <Label for="amount">Amount</Label>
-          <Input
-            type="number"
-            name="amount"
-            id="amount"
-            placeholder="Enter amount"
-            value={currentTrade?.amount || ''}
-            onChange={handleInputChange}
-          />
-        </FormGroup>
-        <Button color="danger" onClick={() => executeTrade('SELL')}>
-          SELL
-        </Button>{' '}
-        <Button color="success" onClick={() => executeTrade('BUY')}>
-          BUY
-        </Button>
+
+
       </Form>
 
-      {/* Toast for notifications */}
       <NotificationToast
         message={toast.message}
         status={toast.status}
         visible={toast.visible}
         onClose={() => setToast({ visible: false, message: '', status: '' })}
+
       />
     </div>
   );
