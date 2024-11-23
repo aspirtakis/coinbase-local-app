@@ -8,9 +8,7 @@ const { createOrders, fetchProducts, filterActivePairs, getAccountsWithUsdcValue
 
     // Helper delay function
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
     console.log("Starting trading bot...");
-
     while (true) {
         try {
             console.log("Fetching accounts and products...");
@@ -42,8 +40,7 @@ const { createOrders, fetchProducts, filterActivePairs, getAccountsWithUsdcValue
                             if (signal.signal === "Buy" && signal.probability > config.enterPropability) {
                                 const openbuys = await handleFetchOrdersBuys(signal.pair);
                                 if (openbuys.length > 0) {
-                                    console.log(openbuys.length + " = THERE ARE OPEN BUYS");
-                                    return
+                                    console.log(openbuys.length + " = THERE ARE OPEN BUYS ABORT TRADING");
                                 } else {
                                     console.log("ENTERING TRADE FOR " + signal.pair);
                                      await createOrders(signal.pair, "BUY", 10,[]);

@@ -12,9 +12,6 @@ export const handleFetchPrice = async (pair) => {
   }
 };
 
-
-
-
 export const getADX = async (pair, timeframe) => {
   try {
     // Fetch candle data for the specified pair and timeframe
@@ -52,8 +49,6 @@ export const getADX = async (pair, timeframe) => {
     return { adx: null, reason: 'Error' };
   }
 };
-
-
 
 export const calculateSupportResistanceFibonacci = async (pair, timeframe,candledata=[]) => {
   try {

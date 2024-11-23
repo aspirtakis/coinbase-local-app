@@ -50,7 +50,7 @@ const BotTrading = () => {
   const [loading, setLoading] = useState(false)
 
 
-  const [botActive, setBotActive] = useState(true);
+  const [botActive, setBotActive] = useState(false);
 
   const [closingPercent, setClosingPercent] = useState(5);
   const [betAmount, setBetAmount] = useState(10);
@@ -129,7 +129,6 @@ const BotTrading = () => {
               console.log("Power - H1:" + power.H1);
               console.log("Power - D1:" + power.D1);
      
-
 
   
             }

@@ -4,65 +4,68 @@ const { v4: uuidv4 } = require('uuid');
 
 
 const fetchCandleData = async (productId, granularity) => {
-   
-    const GRANULARITY_MAP = {
-      60: 'ONE_MINUTE',
-      300: 'FIVE_MINUTE',
-      900: 'FIFTEEN_MINUTE',
-      1800: 'THIRTY_MINUTE',
-      3600: 'ONE_HOUR',
-      21600: 'SIX_HOUR',
-      86400: 'ONE_DAY',
-    };
-  
-    try {
-      const granularityString = GRANULARITY_MAP[parseInt(granularity, 10)];
-      if (!granularityString) {
-        throw new Error(`Invalid granularity value: ${granularity}`);
-      }
-  
-      const now = Math.floor(Date.now() / 1000);
-      const end = now;
-      const start = now - parseInt(granularity, 10) * 300;
-  
-    //   // Fetch candles
-    //   console.log("FETCHING CANDLES " +granularityString)
-      const rawResponse = await client.getPublicProductCandles({
-        productId,
-        granularity: granularityString,
-        start: start.toString(),
-        end: end.toString(),
-      });
-  
-      // Parse and process the response
-      let candles = [];
-      if (typeof rawResponse === 'string') {
-        const parsedResponse = JSON.parse(rawResponse);
-        candles = parsedResponse.candles || [];
-      } else if (rawResponse.candles) {
-        candles = rawResponse.candles;
-      }
-  
-      // Check if candles is an array
-      if (!Array.isArray(candles)) {
-        throw new Error('Candles data is not an array.');
-      }
-  
-      // Format candles
-      const formattedCandles = candles.map(({ start, low, high, open, close }) => ({
-        time: new Date(start * 10000).toISOString(),
-        low: parseFloat(low),
-        high: parseFloat(high),
-        open: parseFloat(open),
-        close: parseFloat(close),
-      }));
-  
-      return formattedCandles;
-    } catch (error) {
-      console.error(`Error fetching candles for ${productId}:`, error.message);
-      throw new Error(`Failed to fetch candle data: ${error.message}`);
-    }
+  const GRANULARITY_MAP = {
+    60: 'ONE_MINUTE',
+    300: 'FIVE_MINUTE',
+    900: 'FIFTEEN_MINUTE',
+    1800: 'THIRTY_MINUTE',
+    3600: 'ONE_HOUR',
+    21600: 'SIX_HOUR',
+    86400: 'ONE_DAY',
   };
+
+  // Helper delay function
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  try {
+    const granularityString = GRANULARITY_MAP[parseInt(granularity, 10)];
+    if (!granularityString) {
+      throw new Error(`Invalid granularity value: ${granularity}`);
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const end = now;
+    const start = now - parseInt(granularity, 10) * 300;
+
+
+    await delay(1000); // 2-secsond delay before making the API call
+    const rawResponse = await client.getPublicProductCandles({
+      productId,
+      granularity: granularityString,
+      start: start.toString(),
+      end: end.toString(),
+    });
+
+    // Parse and process the response
+    let candles = [];
+    if (typeof rawResponse === 'string') {
+      const parsedResponse = JSON.parse(rawResponse);
+      candles = parsedResponse.candles || [];
+    } else if (rawResponse.candles) {
+      candles = rawResponse.candles;
+    }
+
+    // Check if candles is an array
+    if (!Array.isArray(candles)) {
+      throw new Error('Candles data is not an array.');
+    }
+
+    // Format candles
+    const formattedCandles = candles.map(({ start, low, high, open, close }) => ({
+      time: new Date(start * 1000).toISOString(), // Corrected to 1000 (milliseconds)
+      low: parseFloat(low),
+      high: parseFloat(high),
+      open: parseFloat(open),
+      close: parseFloat(close),
+    }));
+
+    return formattedCandles;
+  } catch (error) {
+    console.error(`Error fetching candles for ${productId}:`, error.message);
+    throw new Error(`Failed to fetch candle data: ${error.message}`);
+  }
+};
+
   
 const fetchAccounts = async () => {
     try {
@@ -117,9 +120,7 @@ const fetchOrdersForProduct = async (productId) => {
   };
 
 const createOrders = async ( product_id, side, size, price ) => {
-    console.log(product_id)
-    console.log(side)
-    console.log(size)
+
  
     if (!product_id || !side || !size) {
     throw new Error('Missing required parameters: product_id, side, or size');
@@ -142,7 +143,7 @@ const createOrders = async ( product_id, side, size, price ) => {
 
   try {
 
-    console.log(orderConfiguration)
+
     const order = await client.createOrder({
       client_order_id,
       product_id,

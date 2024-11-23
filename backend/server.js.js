@@ -88,6 +88,8 @@ app.get('/api/product/:productId', async (req, res) => {
   }
 });
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 app.get('/api/candles/:productId', async (req, res) => {
   const { productId } = req.params;
   const { granularity } = req.query;
@@ -113,14 +115,14 @@ app.get('/api/candles/:productId', async (req, res) => {
     const start = now - parseInt(granularity, 10) * 300;
 
 
-    // Fetch candles
+    await delay(1000);
+
     const rawResponse = await client.getPublicProductCandles({
       productId,
       granularity: granularityString,
       start: start.toString(),
       end: end.toString(),
     });
-
 
     // Parse and process the response
     let candles = [];
@@ -152,6 +154,7 @@ app.get('/api/candles/:productId', async (req, res) => {
   }
 });
 
+
 app.get('/api/orders/:product_id', async (req, res) => {
   const { product_id } = req.params;
 
@@ -168,7 +171,7 @@ app.get('/api/bidask/:product_id', async (req, res) => {
   const { product_id } = req.params;
   try {
     const trades = await client.getProductBook({ product_id });
-    console.log(trades)
+
     res.json(JSON.parse(trades));
   } catch (error) {
     console.error(`Error fetching trades for ${product_id}:`, error.message);
