@@ -69,7 +69,7 @@ export const fetchbidask = async (symbol) => {
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms)); // Utility function for delay
 
-export const fetchCandleData = async (pair, timeframe, delayMs = 250) => {
+export const fetchCandleData = async (pair, timeframe, delayMs = 100) => {
   const excludeList = ['USDC-USDC', 'EUR-USDC', 'EUR-USD']; // List of pairs to exclude
   if (excludeList.includes(pair)) {
     console.warn(`Pair "${pair}" is excluded from fetching candle data.`);

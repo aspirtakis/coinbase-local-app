@@ -31,7 +31,7 @@ const ConsoleLogs = () => {
   return (
     <div
       style={{
-        maxHeight: "300px",
+        maxHeight: "100px",
         overflowY: "auto",
         backgroundColor: "#1e1e1e",
         color: "#ffffff",

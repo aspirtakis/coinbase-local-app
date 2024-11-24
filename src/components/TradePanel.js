@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Form, FormGroup, Label, Input, Button, Col, Row } from 'reactstrap';
 import { handleTrade } from '../api/apiCalls';
 import NotificationToast from './ToastNotificator';
-const TradePanel = ({ tradeDetails, refresh }) => {
-  const [currentTrade, setCurrentTrade] = useState(tradeDetails);
-  const [toast, setToast] = useState({ visible: false, message: '', status: '' }); // Toast state
 
-  // Sync local state with tradeDetails prop when it changes
+const TradePanel = ({ tradeDetails, refresh }) => {
+  const [currentTrade, setCurrentTrade] = useState({ pair: '', amount: '' });
+  const [toast, setToast] = useState({ visible: false, message: '', status: '' });
+
+  // Sync local state with tradeDetails prop whenever tradeDetails changes
   useEffect(() => {
-    setCurrentTrade(tradeDetails);
+    if (tradeDetails) {
+      setCurrentTrade({
+        pair: tradeDetails.pair || '', // Update pair from props
+        amount: tradeDetails.amount || '', // Update amount from props
+      });
+    }
   }, [tradeDetails]);
 
   const handleInputChange = (e) => {
@@ -21,12 +27,9 @@ const TradePanel = ({ tradeDetails, refresh }) => {
 
   const executeTrade = async (side) => {
     const { pair, amount } = currentTrade;
-
-    const adjustedAmount = amount * 0.2; // Remove 0.1%
-
-
+    const adjustedAmount = amount * 0.999; // Adjust for 0.1%
     try {
-      const response = await handleTrade(pair, side, Number(adjustedAmount).toFixed(2));
+      const response = await handleTrade(pair, side, Number(adjustedAmount).toFixed(0));
       if (response.success) {
         setToast({
           visible: true,
@@ -35,14 +38,14 @@ const TradePanel = ({ tradeDetails, refresh }) => {
         });
         // Reset fields
         setCurrentTrade({ pair: '', amount: '' });
-        refresh()
+        refresh();
       } else {
         setToast({
           visible: true,
           message: 'Trade execution failed.',
           status: 'error',
         });
-        refresh()
+        refresh();
       }
     } catch (error) {
       setToast({
@@ -50,14 +53,13 @@ const TradePanel = ({ tradeDetails, refresh }) => {
         message: 'An error occurred while executing the trade.',
         status: 'error',
       });
-      refresh()
+      refresh();
       console.error(error);
     }
   };
 
   return (
     <div>
-
       <Form>
         <FormGroup>
           <Row>
@@ -67,7 +69,7 @@ const TradePanel = ({ tradeDetails, refresh }) => {
                 type="text"
                 name="pair"
                 id="pair"
-                value={currentTrade?.pair || ''}
+                value={currentTrade.pair}
                 onChange={handleInputChange}
               />
             </Col>
@@ -78,23 +80,22 @@ const TradePanel = ({ tradeDetails, refresh }) => {
                 name="amount"
                 id="amount"
                 placeholder="Enter amount"
-                value={currentTrade?.amount || ''}
+                value={currentTrade.amount}
                 onChange={handleInputChange}
               />
             </Col>
-            <Col style={{marginTop:30}} sm="2">
+            <Col style={{ marginTop: 30 }} sm="2">
               <Button color="danger" onClick={() => executeTrade('SELL')}>
                 SELL
               </Button>
-
             </Col>
-            <Col  style={{marginTop:30}} sm="2">        <Button color="success" onClick={() => executeTrade('BUY')}>
-              BUY
-            </Button></Col>
+            <Col style={{ marginTop: 30 }} sm="2">
+              <Button color="success" onClick={() => executeTrade('BUY')}>
+                BUY
+              </Button>
+            </Col>
           </Row>
         </FormGroup>
-
-
       </Form>
 
       <NotificationToast
@@ -102,7 +103,6 @@ const TradePanel = ({ tradeDetails, refresh }) => {
         status={toast.status}
         visible={toast.visible}
         onClose={() => setToast({ visible: false, message: '', status: '' })}
-
       />
     </div>
   );
