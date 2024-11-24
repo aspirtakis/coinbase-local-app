@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const { calculateADX } = require('./indicators/adx'); // Import ADX logic
+
 
 const fetchCandleData = async (pair, granularity) => {
   try {
@@ -28,35 +28,15 @@ const fetchCandleData = async (pair, granularity) => {
 };
 
 // ADX API endpoint
-app.get('/api/adx', async (req, res) => {
-  const { pair, granularity } = req.query;
-  if (!pair || !granularity) {
-    return res.status(400).json({ error: 'Missing required parameters: pair, granularity.' });
-  }
 
-  try {
-    // Fetch candles for the given pair and granularity
-    const candles = await fetchCandleData(pair, granularity);
-
-    if (!candles || candles.length === 0) {
-      return res.status(404).json({ error: 'No candle data found.' });
-    }
-
-    // Calculate ADX
-    const adx = await calculateADX(candles);
-
-    // Return the ADX value
-    res.json({ pair, granularity, adx });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 
 
 // Endpoint to fetch account data
 app.get('/api/accounts', async (req, res) => {
   try {
+    
+
     const accounts = await client.listAccounts({});
     res.json(accounts);
   } catch (error) {
@@ -67,6 +47,7 @@ app.get('/api/accounts', async (req, res) => {
 
 app.get('/api/listproducts', async (req, res) => {
   try {
+    await delay(100);
     const accounts = await client.listProducts({product_type:"SPOT"});
     res.json(accounts);
   } catch (error) {
@@ -79,6 +60,7 @@ app.get('/api/listproducts', async (req, res) => {
 app.get('/api/product/:productId', async (req, res) => {
   const { productId } = req.params;
   try {
+    await delay(100);
     // Use the SDK's method to fetch product details
     const product = await client.getProduct({ productId: productId });
     res.json(product); // Return the product details
@@ -115,9 +97,9 @@ app.get('/api/candles/:productId', async (req, res) => {
     const start = now - parseInt(granularity, 10) * 300;
 
 
-    await delay(1000);
+    await delay(100);
 
-    const rawResponse = await client.getPublicProductCandles({
+    const rawResponse = await client.getProductCandles({
       productId,
       granularity: granularityString,
       start: start.toString(),
@@ -159,6 +141,7 @@ app.get('/api/orders/:product_id', async (req, res) => {
   const { product_id } = req.params;
 
   try {
+    await delay(100);
     const trades = await client.listFills({ product_id });
     res.json(JSON.parse(trades));
   } catch (error) {
@@ -170,7 +153,10 @@ app.get('/api/orders/:product_id', async (req, res) => {
 app.get('/api/bidask/:product_id', async (req, res) => {
   const { product_id } = req.params;
   try {
+    
+    await delay(100);
     const trades = await client.getProductBook({ product_id });
+
 
     res.json(JSON.parse(trades));
   } catch (error) {
