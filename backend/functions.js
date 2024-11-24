@@ -28,8 +28,8 @@ const fetchCandleData = async (productId, granularity) => {
     const start = now - parseInt(granularity, 10) * 300;
 
 
-    await delay(1000); // 2-secsond delay before making the API call
-    const rawResponse = await client.getPublicProductCandles({
+    await delay(500); // 2-secsond delay before making the API call
+    const rawResponse = await client.getProductCandles({
       productId,
       granularity: granularityString,
       start: start.toString(),
@@ -230,6 +230,8 @@ const calculatePairProfit = async (pair) => {
           totalProfitDollars: 0,
           profitPercentage: 0,
           isInProfit: false,
+          usdcprice:0,
+          ordersData:[]
         };
       }
   
@@ -272,6 +274,8 @@ const calculatePairProfit = async (pair) => {
         totalProfitDollars: parseFloat(totalProfit.toFixed(2)),
         profitPercentage: parseFloat(profitPercentage.toFixed(2)),
         isInProfit,
+        usdcprice:currentPrice,
+        orders:orders
       };
     } catch (error) {
       console.error(`Error calculating profit for pair ${pair}:`, error.message);
@@ -282,6 +286,8 @@ const calculatePairProfit = async (pair) => {
         totalProfitDollars: 0,
         profitPercentage: 0,
         isInProfit: false,
+        usdcprice:0,
+        orders:[]
       };
     }
   };
@@ -328,7 +334,7 @@ const calculatePairProfit = async (pair) => {
         // Filtering conditions
         const isSignificantPriceChange = Math.abs(priceChange) > 5; // More than ±5% price change
         const isHighVolume = Number(volume) > 100000000; // Minimum volume threshold
-        const isVolumeIncreasing = volumeChange > 10; // More than 10% increase in volume
+        const isVolumeIncreasing = volumeChange > 5; // More than 10% increase in volume
   
         return isSignificantPriceChange && isHighVolume && isVolumeIncreasing;
       });
@@ -340,7 +346,38 @@ const calculatePairProfit = async (pair) => {
     }
   };
 
+const calculateRetradeSignal = async (pair, currentPrice, buyOrders, thresholdPercentage = 2) => {
+    try {
+      // Find the lowest order price
+    
+      const lowestOrder = buyOrders.reduce((prev, curr) =>
+        prev.price < curr.price ? prev : curr
+      );
+  
+      const percentageDifference =
+        ((lowestOrder.price - currentPrice) / lowestOrder.price) * 100;
+  
+      const entrySignal = percentageDifference >= thresholdPercentage; // Check if it's greater than or equal
+  
+      return {
+        currentPrice,
+        entrySignal,
+        reason: entrySignal
+          ? 'Current price is lower than the threshold percentage relative to the lowest order price.'
+          : `Current price is not ${thresholdPercentage}% lower than the lowest order.`,
+        lowestOrder,
+        percentageDifference: percentageDifference.toFixed(2),
+      };
+    } catch (error) {
+      console.error(`Error calculating retrade signal for ${pair}:`, error.message);
+      return {
+        currentPrice,
+        entrySignal: false,
+        reason: 'Error calculating retrade signal',
+        percentageDifference: null,
+      };
+    }
+  };
 
 
-
-module.exports = {filterActivePairs,getAccountsWithUsdcValueAboveOne,calculatePairProfit ,fetchPrice,handleFetchOrdersBuys,createOrders, fetchBidAskForProduct,fetchOrdersForProduct,fetchProducts, fetchCandleData,fetchAccounts,fetchProductDetails};
+module.exports = {calculateRetradeSignal,filterActivePairs,getAccountsWithUsdcValueAboveOne,calculatePairProfit ,fetchPrice,handleFetchOrdersBuys,createOrders, fetchBidAskForProduct,fetchOrdersForProduct,fetchProducts, fetchCandleData,fetchAccounts,fetchProductDetails};

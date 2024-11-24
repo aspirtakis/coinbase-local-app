@@ -9,9 +9,34 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
+const fetchCandleData = async (pair, granularity) => {
+  try {
+    const response = await fetch(
+      `http://localhost:4000/api/candles/${pair}?granularity=${granularity}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch candles for ${pair} with granularity ${granularity}`);
+    }
+
+    const candles = await response.json();
+    return candles;
+  } catch (error) {
+    console.error(`Error fetching candles: ${error.message}`);
+    throw error;
+  }
+};
+
+// ADX API endpoint
+
+
+
+
 // Endpoint to fetch account data
 app.get('/api/accounts', async (req, res) => {
   try {
+    
+
     const accounts = await client.listAccounts({});
     res.json(accounts);
   } catch (error) {
@@ -22,6 +47,7 @@ app.get('/api/accounts', async (req, res) => {
 
 app.get('/api/listproducts', async (req, res) => {
   try {
+    await delay(100);
     const accounts = await client.listProducts({product_type:"SPOT"});
     res.json(accounts);
   } catch (error) {
@@ -34,6 +60,7 @@ app.get('/api/listproducts', async (req, res) => {
 app.get('/api/product/:productId', async (req, res) => {
   const { productId } = req.params;
   try {
+    await delay(100);
     // Use the SDK's method to fetch product details
     const product = await client.getProduct({ productId: productId });
     res.json(product); // Return the product details
@@ -70,9 +97,9 @@ app.get('/api/candles/:productId', async (req, res) => {
     const start = now - parseInt(granularity, 10) * 300;
 
 
-    await delay(1000);
+    await delay(100);
 
-    const rawResponse = await client.getPublicProductCandles({
+    const rawResponse = await client.getProductCandles({
       productId,
       granularity: granularityString,
       start: start.toString(),
@@ -114,6 +141,7 @@ app.get('/api/orders/:product_id', async (req, res) => {
   const { product_id } = req.params;
 
   try {
+    await delay(100);
     const trades = await client.listFills({ product_id });
     res.json(JSON.parse(trades));
   } catch (error) {
@@ -125,7 +153,10 @@ app.get('/api/orders/:product_id', async (req, res) => {
 app.get('/api/bidask/:product_id', async (req, res) => {
   const { product_id } = req.params;
   try {
+    
+    await delay(100);
     const trades = await client.getProductBook({ product_id });
+
 
     res.json(JSON.parse(trades));
   } catch (error) {

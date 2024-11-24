@@ -1,67 +1,89 @@
-const { calculateProbabilityBasedSignal, detectCandlestickReversalSignal, multipleTimeframeAnalysis, getADX, calculateSupportResistanceFibonacci, calculateCompositeTrend, calculateTrend, detectATRSignal, detectBollingerBandsSignal } = require('./indicators/taindicators');
-const { createOrders, fetchProducts, filterActivePairs, getAccountsWithUsdcValueAboveOne, fetchAccounts, calculatePairProfit, fetchCandleData, handleFetchOrdersBuys, fetchPrice } = require('./functions');
+const config = require('./config');
+const {
+    calculateProbabilityBasedSignal,
+    detectCandlestickReversalSignal,
+    multipleTimeframeAnalysis,
+    getADX,
+    calculateSupportResistanceFibonacci,
+    calculateCompositeTrend,
+    calculateTrend,
+    detectATRSignal,
+    detectBollingerBandsSignal,
+} = require('./indicators/taindicators');
+const {
+    createOrders,
+    fetchProducts,
+    filterActivePairs,
+    getAccountsWithUsdcValueAboveOne,
+    fetchAccounts,
+    calculatePairProfit,
+    fetchCandleData,
+    handleFetchOrdersBuys,
+    fetchPrice,
+} = require('./functions');
 
 (async () => {
-    const config = { enterPropability: 50, enterAmmount: 50 };
-
-    const frame = 3600;
+    const { enterPropability, enterAmmount, timeframe, delayBetweenProducts, apiRateLimitDelay } = config.trading;
+    const { minUSDCBalance } = config.account;
 
     // Helper delay function
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
     console.log("Starting trading bot...");
-    while (true) {
-        try {
-            console.log("Fetching accounts and products...");
 
-            const accounts = await fetchAccounts();
-            const usdcbalan = accounts.accounts.filter((acc) => acc.currency === "USDC")[0].available_balance.value;
-            const usdcbalance = Number(usdcbalan).toFixed(2);
+    try {
+        console.log("Fetching accounts and products...");
 
-            const allproducts = await fetchProducts();
-            const parsed = JSON.parse(allproducts);
-            const tradablepairs = await filterActivePairs(parsed.products);
-            const usdctradeblepairs = tradablepairs.filter((pairs2) => pairs2.quote_currency_id === 'USDC');
+        const accounts = await fetchAccounts();
+        const usdcbalan = accounts.accounts.filter((acc) => acc.currency === "USDC")[0].available_balance.value;
+        const usdcbalance = Number(usdcbalan).toFixed(2);
 
-            if (tradablepairs) {
-                console.log("FREE-USDC=" + usdcbalance);
+        const allproducts = await fetchProducts();
+        const parsed = JSON.parse(allproducts);
+        const tradablepairs = await filterActivePairs(parsed.products);
+        const usdctradeblepairs = tradablepairs.filter((pairs2) => pairs2.quote_currency_id === 'USDC');
 
-                if (usdcbalance > config.enterAmmount) {
-                    console.log("THERE IS FREE BALANCE START TRADING");
+        if (tradablepairs) {
+            console.log("FREE-USDC=" + usdcbalance);
 
-                    // Use for...of to enable delay between products
-                    for (const product of usdctradeblepairs) {
-                        await delay(5000); // 3-second delay between each product
+            if (usdcbalance > minUSDCBalance) {
+                console.log("THERE IS FREE BALANCE START TRADING");
 
-                        try {
-                            const candlesnrev = await fetchCandleData(product.product_id, frame);
-                            const candles = candlesnrev.reverse();
-                            const signal = await calculateProbabilityBasedSignal(product.product_id, frame, candles);
+                // Use for...of to enable delay between products
+                for (const product of usdctradeblepairs) {
+                    await delay(delayBetweenProducts); // Delay between each product
 
-                            if (signal.signal === "Buy" && signal.probability > config.enterPropability) {
-                                const openbuys = await handleFetchOrdersBuys(signal.pair);
-                                if (openbuys.length > 0) {
-                                    console.log(openbuys.length + " = THERE ARE OPEN BUYS ABORT TRADING");
-                                } else {
-                                    console.log("ENTERING TRADE FOR " + signal.pair);
-                                     await createOrders(signal.pair, "BUY", 10,[]);
-                                
-                                }
+                    try {
+                        const candlesnrev = await fetchCandleData(product.product_id, timeframe);
+                        await delay(apiRateLimitDelay); // Delay for API rate limiting
+                        const candles = candlesnrev.reverse();
+                        const signal = await calculateProbabilityBasedSignal(product.product_id, timeframe, candles);
+                        await delay(apiRateLimitDelay);
+
+                        if (signal.signal === "Buy" && signal.probability > enterPropability) {
+                            const openbuys = await handleFetchOrdersBuys(signal.pair);
+                            if (openbuys.length > 0) {
+                                console.log(`${signal.pair} -- ${openbuys.length} = THERE ARE OPEN BUYS Entering Re TRADING`);
                             } else {
-                                console.log("NO SIGNAL FOR " + product.product_id);
+                                console.log(`ENTERING TRADE FOR ${signal.pair} PROB: ${signal.probability}`);
+                                const trade = await createOrders(signal.pair, "BUY", enterAmmount, []);
+                                console.log(trade);
                             }
-                        } catch (error) {
-                            console.error(`Error processing product ${product.product_id}:`, error.message);
+                        } else {
+                            console.log(`NO SIGNAL FOR ${product.product_id}`);
                         }
+                    } catch (error) {
+                        console.error(`Error processing product ${product.product_id}:`, error.message);
                     }
                 }
+            } else {
+                console.log(`Not enough USDC balance. Minimum required: $${minUSDCBalance}`);
             }
-        } catch (error) {
-            console.error("Error in trading loop:", error.message);
         }
-
-        console.log("Waiting 10 seconds before starting next iteration...");
-        await delay(350000); // 10-second delay after all processing is complete
+    } catch (error) {
+        console.error("Error in trading execution:", error.message);
     }
+
+    console.log("Trading execution finished. Exiting...");
+    process.exit(0); // Exit the script
 })();
-
-

@@ -728,15 +728,15 @@ const calculateProbabilityBasedSignal = async (pair, frame, candles) => {
       const config = {
         thresholds: {
           compositeTrendH1: 30, // Composite trend strength threshold for H1
-          probabilityBuy: 50,   // Probability required for "Buy" signal
-          probabilityNeutral: 20, // Probability required for "Neutral" signal
+          probabilityBuy: 30,   // Probability required for "Buy" signal
+          probabilityNeutral: 5, // Probability required for "Neutral" signal
         },
         weights: {
-          compositeTrend: 20, // Trend strength and ADX combined
-          atrSignal: 10,      // ATR breakout
+          compositeTrend: 25, // Trend strength and ADX combined
+          atrSignal: 15,      // ATR breakout
           bollingerSignal: 10, // Bollinger Band Reversal
-          multipleFrameAnalysis: 10, // Multi-timeframe Confirmation
-          candlestickSignal: 50, // Reversal Patterns
+          multipleFrameAnalysis: 20, // Multi-timeframe Confirmation
+          candlestickSignal: 30, // Reversal Patterns
         },
       };
   
