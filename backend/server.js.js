@@ -1,31 +1,16 @@
 const express = require('express');
 const cors = require('cors');
-const client = require('./coinbaseClient'); // Import the reusable Coinbase client
 
+const getClientByName = require('./clientFactory');
 const { v4: uuidv4 } = require('uuid');
 const app = express();
+
+
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-const fetchCandleData = async (pair, granularity) => {
-  try {
-    const response = await fetch(
-      `http://localhost:4000/api/candles/${pair}?granularity=${granularity}`
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch candles for ${pair} with granularity ${granularity}`);
-    }
-
-    const candles = await response.json();
-    return candles;
-  } catch (error) {
-    console.error(`Error fetching candles: ${error.message}`);
-    throw error;
-  }
-};
 
 // ADX API endpoint
 
@@ -34,9 +19,14 @@ const fetchCandleData = async (pair, granularity) => {
 
 // Endpoint to fetch account data
 app.get('/api/accounts', async (req, res) => {
+
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
   try {
     
-
+    const client = getClientByName(name) // Import the reusable Coinbase client
     const accounts = await client.listAccounts({limit:250});
     res.json(accounts);
   } catch (error) {
@@ -46,8 +36,13 @@ app.get('/api/accounts', async (req, res) => {
 });
 
 app.get('/api/listproducts', async (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
   try {
     await delay(100);
+    const client = getClientByName(name) // Import the reusable Coinbase client
     const accounts = await client.listProducts({product_type:"SPOT"});
     res.json(accounts);
   } catch (error) {
@@ -58,10 +53,15 @@ app.get('/api/listproducts', async (req, res) => {
 
 // Endpoint to fetch product details
 app.get('/api/product/:productId', async (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
   const { productId } = req.params;
   try {
     await delay(100);
     // Use the SDK's method to fetch product details
+    const client = getClientByName(name) // Import the reusable Coinbase client
     const product = await client.getProduct({ productId: productId });
     res.json(product); // Return the product details
   } catch (error) {
@@ -73,6 +73,10 @@ app.get('/api/product/:productId', async (req, res) => {
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 app.get('/api/candles/:productId', async (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
   const { productId } = req.params;
   const { granularity } = req.query;
 
@@ -98,6 +102,7 @@ app.get('/api/candles/:productId', async (req, res) => {
 
 
     await delay(100);
+    const client = getClientByName(name) // Import the reusable Coinbase client
 
     const rawResponse = await client.getProductCandles({
       productId,
@@ -138,10 +143,15 @@ app.get('/api/candles/:productId', async (req, res) => {
 
 
 app.get('/api/orders/:product_id', async (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
   const { product_id } = req.params;
 
   try {
     await delay(100);
+    const client = getClientByName(name) // Import the reusable Coinbase client
     const trades = await client.listFills({ product_id });
     res.json(JSON.parse(trades));
   } catch (error) {
@@ -151,6 +161,11 @@ app.get('/api/orders/:product_id', async (req, res) => {
 });
 
 app.get('/api/bidask/:product_id', async (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
+  const client = getClientByName(name) // Import the reusable Coinbase client
   const { product_id } = req.params;
   try {
     
@@ -167,13 +182,17 @@ app.get('/api/bidask/:product_id', async (req, res) => {
 
 
 app.post('/api/create-order',async (req, res) => {
+  const { name } = req.query;
+  if (!name) {
+    return res.status(400).json({ error: 'Account name is required' });
+  }
   const { product_id, side, size, price } = req.body;
 
   if (!product_id || !side || !size) {
     return res.status(400).json({ error: 'Missing required parameters' });
   }
 
-
+  const client = getClientByName(name) // Import the reusable Coinbase client
   const client_order_id =  uuidv4(); // Generate a unique ID for the order
   const orderConfiguration =
     side === 'SELL'
