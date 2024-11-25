@@ -3,7 +3,10 @@ const { ADX, RSI, SMA ,ATR} = require('technicalindicators'); // Import required
 const {fetchCandleData,fetchPrice} = require('../functions'); // Import your candle fetching function
 const { BollingerBands } = require('technicalindicators');
 
-
+const {
+  thresholds,
+  weights,
+} = require('../config'); // Import thresholds and weights from config.js
 const getADX = async (candles) => {
   try {
     // Fetch candle dat
@@ -723,96 +726,79 @@ const detectCandlestickReversalSignal = async (pair, candles) => {
 
 
 const calculateProbabilityBasedSignal = async (pair, frame, candles) => {
-    try {
-      // Configuration for thresholds and weights
-      const config = {
-        thresholds: {
-          compositeTrendH1: 30, // Composite trend strength threshold for H1
-          probabilityBuy: 30,   // Probability required for "Buy" signal
-          probabilityNeutral: 5, // Probability required for "Neutral" signal
-        },
-        weights: {
-          compositeTrend: 25, // Trend strength and ADX combined
-          atrSignal: 15,      // ATR breakout
-          bollingerSignal: 10, // Bollinger Band Reversal
-          multipleFrameAnalysis: 20, // Multi-timeframe Confirmation
-          candlestickSignal: 30, // Reversal Patterns
-        },
-      };
-  
-      // Step 1: Fetch all required signals
-      const compositeTrend = await calculateCompositeTrend(pair);
-      const atrSignal = await detectATRSignal(pair, frame);
-      const bollingerSignal = await detectBollingerBandsSignal(pair);
-      const multipleFrameAnalysis = await multipleTimeframeAnalysis(pair);
-      const candlestickReversalSignal = await detectCandlestickReversalSignal(pair, candles);
-  
-      const reasons = [];
-      let probability = 0;
-  
-      // Composite Trend Signal
-      if (compositeTrend.H1 > config.thresholds.compositeTrendH1) {
-        probability += config.weights.compositeTrend;
-        reasons.push(`Composite Trend is strong on H1: ${compositeTrend.details.H1.trend}`);
-      }
-  
-      // ATR Signal
-      if (atrSignal.signal === "Buy") {
-        probability += config.weights.atrSignal;
-        reasons.push(`ATR breakout detected: ${atrSignal.reason}`);
-      }
-  
-      // Bollinger Bands Signal
-      if (bollingerSignal.signal === "Buy") {
-        probability += config.weights.bollingerSignal;
-        reasons.push(`Bollinger Band reversal detected: ${bollingerSignal.reason}`);
-      }
-  
-      // Multi-timeframe Analysis
-      if (multipleFrameAnalysis.signal === "Buy") {
-        probability += config.weights.multipleFrameAnalysis;
-        reasons.push(`Multi-timeframe confirmation: ${multipleFrameAnalysis.reason}`);
-      }
-  
-      // Candlestick Reversal Patterns
-      if (candlestickReversalSignal.signal === "Buy") {
-        probability += config.weights.candlestickSignal;
-        reasons.push(`Candlestick reversal pattern detected: ${candlestickReversalSignal.reason}`);
-      }
-  
-      // Final Signal Decision
-      const finalSignal =
-        probability >= config.thresholds.probabilityBuy
-          ? "Buy"
-          : probability >= config.thresholds.probabilityNeutral
-          ? "Neutral"
-          : "None";
-  
-      // Return final signal, probability, and reasoning
-      return {
-        pair,
-        signal: finalSignal,
-        probability: probability.toFixed(2),
-        reasons: reasons.join(" | "),
-        details: {
-          compositeTrend,
-          atrSignal,
-          bollingerSignal,
-          multipleFrameAnalysis,
-          candlestickReversalSignal,
-        },
-      };
-    } catch (error) {
-      console.error(`Error calculating probability-based signal for ${pair}:`, error.message);
-      return {
-        pair,
-        signal: "Error",
-        probability: 0,
-        reasons: "Error during calculations.",
-      };
+  try {
+    // Step 1: Fetch all required signals
+    const compositeTrend = await calculateCompositeTrend(pair);
+    const atrSignal = await detectATRSignal(pair, frame);
+    const bollingerSignal = await detectBollingerBandsSignal(pair);
+    const multipleFrameAnalysis = await multipleTimeframeAnalysis(pair);
+    const candlestickReversalSignal = await detectCandlestickReversalSignal(pair, candles);
+
+    const reasons = [];
+    let probability = 0;
+
+    // Composite Trend Signal
+    if (compositeTrend.H1 > thresholds.compositeTrendH1) {
+      probability += weights.compositeTrend;
+      reasons.push(`Composite Trend is strong on H1: ${compositeTrend.details.H1.trend}`);
     }
-  };
-  
+
+    // ATR Signal
+    if (atrSignal.signal === "Buy") {
+      probability += weights.atrSignal;
+      reasons.push(`ATR breakout detected: ${atrSignal.reason}`);
+    }
+
+    // Bollinger Bands Signal
+    if (bollingerSignal.signal === "Buy") {
+      probability += weights.bollingerSignal;
+      reasons.push(`Bollinger Band reversal detected: ${bollingerSignal.reason}`);
+    }
+
+    // Multi-timeframe Analysis
+    if (multipleFrameAnalysis.signal === "Buy") {
+      probability += weights.multipleFrameAnalysis;
+      reasons.push(`Multi-timeframe confirmation: ${multipleFrameAnalysis.reason}`);
+    }
+
+    // Candlestick Reversal Patterns
+    if (candlestickReversalSignal.signal === "Buy") {
+      probability += weights.candlestickSignal;
+      reasons.push(`Candlestick reversal pattern detected: ${candlestickReversalSignal.reason}`);
+    }
+
+    // Final Signal Decision
+    const finalSignal =
+      probability >= thresholds.probabilityBuy
+        ? "Buy"
+        : probability >= thresholds.probabilityNeutral
+        ? "Neutral"
+        : "None";
+
+    // Return final signal, probability, and reasoning
+    return {
+      pair,
+      signal: finalSignal,
+      probability: probability.toFixed(2),
+      reasons: reasons.join(" | "),
+      details: {
+        compositeTrend,
+        atrSignal,
+        bollingerSignal,
+        multipleFrameAnalysis,
+        candlestickReversalSignal,
+      },
+    };
+  } catch (error) {
+    console.error(`Error calculating probability-based signal for ${pair}:`, error.message);
+    return {
+      pair,
+      signal: "Error",
+      probability: 0,
+      reasons: "Error during calculations.",
+    };
+  }
+};
   
   
 module.exports = {calculateProbabilityBasedSignal ,detectCandlestickReversalSignal,multipleTimeframeAnalysis,detectBollingerBandsSignal,detectATRSignal,calculateTrend,calculateCompositeTrend,calculateSupportResistanceFibonacci,getADX };
