@@ -6,9 +6,9 @@ import { ButtonGroup, Button, Label, Form, FormGroup, Input, Row, Col } from 're
 
 
 
-const CandlestickChart = ({ pair }) => {
+const CandlestickChart = ({ pair ,frame}) => {
   const [candles, setCandles] = useState([]);
-  const [timeframe, setTimeframe] = useState('3600'); // Default to H1 (1-hour)
+  const [timeframe, setTimeframe] = useState(frame); // Default to H1 (1-hour)
   const [inputPair, setInputPair] = useState(pair); // State to store the user input
 
   const handleInputChange = (e) => {

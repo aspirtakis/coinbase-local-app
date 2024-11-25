@@ -1058,7 +1058,7 @@ export const calculateAllPairProfits = async (excludeList = [], accountsData = [
   try {
     // Fetch all accounts
     let profile = accountsData;
-    const accounts = profile.accounts;
+    const accounts = profile;
     // Filter accounts with balances and exclude pairs in the excludeList
     const pairsWithBalances = accounts
       .filter((account) => {
@@ -1247,6 +1247,87 @@ export const detectDivergence = async (pair, timeframe, candles) => {
     return { signal: 'Error', reason: 'Error during divergence analysis.' };
   }
 };
+
+
+export const sumAllUsdcAndBtcValues = async (accounts, usdcAccount) => {
+  try {
+    // Calculate total in USDC from accounts
+    const totalInUsdc = accounts.reduce((total, account) => {
+      const usdcValue = parseFloat(account.usdcValue) || 0; // Ensure valid usdcValue
+      const balance = parseFloat(account.available_balance?.value) || 0; // Ensure valid balance
+      return total + usdcValue; // Add account contribution
+    }, 0);
+
+    const totalUSDC = parseFloat(usdcAccount) || 0;
+    const totalPocketInUsdc = totalInUsdc + totalUSDC;
+    const btcPriceInUsdc = await fetchPrice('BTC-USDC');
+    if (!btcPriceInUsdc || isNaN(btcPriceInUsdc)) {
+      throw new Error('Invalid BTC price fetched');
+    }
+
+  
+    const totalInBtc = totalPocketInUsdc / btcPriceInUsdc;
+
+    return {
+      totalInUsdc: parseFloat(totalInUsdc.toFixed(2)), // Rounded to 2 decimals
+      totalInBtc: parseFloat(totalInBtc.toFixed(8)), // Rounded to 8 decimals
+      totalUSDC: parseFloat(totalUSDC.toFixed(2)), // Rounded to 2 decimals
+      totalPocket: parseFloat(totalPocketInUsdc.toFixed(2)), // Rounded to 2 decimals
+    };
+  } catch (error) {
+    console.error('Error calculating totals:', error.message);
+    return { totalInUsdc: 0, totalInBtc: 0, totalUSDC: 0, totalPocket: 0 };
+  }
+};
+
+export const filterAndAddUSDPrices = async (accounts) => {
+  if (!Array.isArray(accounts)) {
+    console.error('Invalid accounts data:', accounts);
+    return [];
+  }
+
+  const promises = accounts.map(async (account) => {
+    const { currency, available_balance } = account;
+
+    // Validate account data
+    if (!currency || !available_balance?.value) {
+      console.warn('Skipping invalid account:', account);
+      return null;
+    }
+
+    const balance = parseFloat(available_balance.value);
+    if (balance > 0.00001) {
+      try {
+        // Fetch price
+        const priceUSD = await fetchPrice(`${currency}-USDC`);
+        if (!priceUSD || isNaN(priceUSD)) {
+          console.warn(`Invalid price for ${currency}:`, priceUSD);
+          return null;
+        }
+
+        // Add price to account
+        return {
+          ...account,
+          usdcValue: balance * priceUSD, // Add the price to the object
+        };
+      } catch (error) {
+        console.error(`Error fetching price for ${currency}:`, error.message);
+        return null;
+      }
+    }
+    return null; // Skip accounts with zero balance
+  });
+
+  try {
+    const results = await Promise.all(promises);
+    return results.filter((account) => account !== null); // Remove null results
+  } catch (error) {
+    console.error('Error processing accounts:', error.message);
+    return [];
+  }
+};
+
+
 
 
 

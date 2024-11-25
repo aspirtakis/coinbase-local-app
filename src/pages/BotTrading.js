@@ -11,16 +11,17 @@ import { detectATRSignal } from '../utils/tradingUtils';
 import { detectBollingerBandsSignal } from '../utils/tradingUtils';
 import { multipleTimeframeAnalysis } from '../utils/tradingUtils';
 import { detectReversalEntrySignal } from '../utils/tradingUtils';
-import { calculateAllPairProfits, calculatePairProfit, detectThreeLevelSemaforSignal, detectCandlestickReversalSignal, calculateProbabilityBasedSignal, filterActivePairs } from '../utils/tradingUtils';
+import { filterAndAddUSDPrices, sumAllUsdcAndBtcValues, calculateAllPairProfits, calculatePairProfit, detectThreeLevelSemaforSignal, detectCandlestickReversalSignal, calculateProbabilityBasedSignal, filterActivePairs } from '../utils/tradingUtils';
 import AccountTable from '../components/AccountTable';
 import TimeFrameToggle from '../components/timeframes';
 import OrderTotalsTable from '../components/orderTotals';
 import Spinneras from '../components/spinner';
 import NotificationToast from '../components/ToastNotificator';
 import ConsoleLogs from '../components/consoles';
-
+import CandlestickChart from '../components/CandlestickChart';
 const BotTrading = () => {
-  const [currentTrade, setCurrentTrade] = useState();
+  const [accounts, setAccounts] = useState([]);
+  // const [currentTrade, setCurrentTrade] = useState();
   const [toast, setToast] = useState({ visible: false, message: '', status: '' }); // Toast state
 
   const [pair, setPair] = useState('BTC-USDC');
@@ -37,124 +38,100 @@ const BotTrading = () => {
   const [signalsSell, setSignalsSell] = useState([]); // State to store the list of signals
 
   const [TotalAccounts, setTotalAccounts] = useState();
-  const [accounts, setAccounts] = useState([]);
+
   const [prices, setPrices] = useState({});
   const [error, setError] = useState(null);
-  const [refresh, setRefresh] = useState(false)
+  // const [refresh, setRefresh] = useState(false)
   const [botisScanning, setbotIsScanning] = useState(false)
   const [usdc, setUsdc] = useState([])
   const [orderstotals, setOrdersTotals] = useState([])
   const [AllOrdersTotals, setAllOrdersTotals] = useState([])
   const [btcprice, setBtcprice] = useState([])
-  const [accountsData, setAccountsData] = useState([])
+  // const [accountsData, setAccountsData] = useState([])
   const [loading, setLoading] = useState(false)
-
-
   const [botActive, setBotActive] = useState(false);
-
   const [closingPercent, setClosingPercent] = useState(5);
   const [betAmount, setBetAmount] = useState(10);
   const [betPropabilty, setBetPropability] = useState(75);
   const toggleBot = () => setBotActive((prevState) => !prevState);
   const [ammount, setAmmount] = useState(0);
-  const [autoTrading, setAutoTrading] = useState(false);
   const [autoClosing, setAutoClosing] = useState(false);
   const closepercent = closingPercent
-  const betammount = betAmount
 
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  // const [autoTrading, setAutoTrading] = useState(false);
 
-  // const botData = async () => {
-  //   setbotIsScanning(true)
-  //   console.log("Starting Auto Trading");
-  //   try {
-  //     const signals = await checkPropability();
-  //     for (const signal of signals) {
-  //       console.log(`Processing signal for pair: ${signal.pair}`);
-  //       const mergedOrders = await handleFetchOrders(signal.pair);
-
-  //       if (mergedOrders.length > 0) {
-  //         console.log(`PAIR HAS ORDERS ABORTING  ${signal.pair}`);
-  //         continue;
-  //       }
-  //       const acco = await fetchAccounts()
-  //       const accountusds = acco.accounts.filter((acc) => acc.currency === "USDC")
-  //       const usdcr = accountusds[0].available_balance.value;
-  //       if (usdcr > betammount && signal.probability > betPropabilty) {
-  //         console.log(`${usdcr} -Available -> Trade ${signal.pair} -->Propabiliyty ${signal.probability}`);
-  //         await executeTrade(signal.pair, "BUY", betammount)
-  //       }
-  //       await delay(3000); // 3-second delay between orders
-  //     }
-  //     setbotIsScanning(false)
-  //   } catch (error) {
-  //     console.error("Error during auto trading process:", error.message);
+  // useEffect(() => {
+  //   let interval;
+  //   const fetchData = async () => {
+  //     setLoading(true)
+  //     const btcprice = await fetchPrice("BTC-USDC");
+  //     setBtcprice(btcprice);
+  //     await initializeData();
+  //     const candles =  await fetchCandleData(pair, frame); // Fetch H1 candles
+  //     setCandlesH1(candles)
+  //     setLoading(false)
+  //   };
+  //   if (botActive) {
+  //     interval = setInterval(() => {
+  //       fetchData();
+  //     },15000);
+  //   } else {
+  //     clearInterval(interval);
   //   }
+  //   return () => clearInterval(interval);
+  // }, [botActive]);
 
-  // };
 
 
-  const closing = async () => {
-    setbotIsScanning(true)
-    try {
-      const data = await fetchAccounts();
-      const allOrdersTotals = await calculateAllPairProfits([], data);
 
-      await Promise.all(
-        allOrdersTotals.map(async (order) => {
-          if (order.profitPercentage > closepercent) {
-            const adjustedAmount = order.balance * 0.3; // Remove 0.1%
-         
-            const SRS = await calculateSupportResistanceFibonacci(order.pair, frame);
-            const price = await fetchPrice(order.pair);
-            const reversals = await detectCandlestickReversalSignal(order.pair, frame);
-            const power = await calculateCompositeTrend(order.pair, frame);
 
-            const resistance = SRS.resistance;
-            const tolerance = resistance * 0.01; // 1% of resistance
 
-            if (
-              price > resistance - tolerance &&
-              price < resistance + tolerance &&
-              reversals.signal === "Sell" &&
-              power.H1 < 35 &&
-              power.D1 < 40
-            ) {
-              console.log("EXECUTING CLOSING FOR " + order.pair );
-              await executeTrade(order.pair, "SELL", Number(adjustedAmount).toFixed(2));
-            } else {
-              console.log(order.pair + " -- ABORTING CLOSING "+ "AT : "+price);
-              console.log("Candles Signal is : " + reversals.signal);
-              console.log("RESISTANCE:" + SRS.resistance);
-              console.log("Power - H1:" + power.H1);
-              console.log("Power - D1:" + power.D1);
-     
+  useEffect(() => {
+    fetchData()
+  }, []);
 
+  useEffect(() => {
+    onPairFrameChange();
+  }, [pair, frame]);
+
+
+  // useEffect(() => {
+  //   let isRunning = false; // Flag to track if the bot is already running
   
-            }
-          }
-        })
-      );
+  //   const handleClosing = async () => {
+  //     while (autoClosing) { // Continue looping as long as autoClosing is true
+  //       if (isRunning) return; // Prevent overlapping runs
+  //       isRunning = true; // Mark as running
+  //       try {
+  //         await closing(); // Wait for the closing function to complete
+  //       } catch (error) {
+  //         console.error("Error in handleClosing:", error.message);
+  //       } finally {
+  //         isRunning = false; // Reset the flag after the run completes
+  //       }
+  //       // Wait before the next iteration
+  //       await new Promise((resolve) => setTimeout(resolve, 10000)); // 10-second delay
+  //     }
+  //   };
+  
+  //   if (autoClosing) {
+  //     handleClosing(); // Start the loop
+  //   }
+  
+  //   return () => {
+  //     isRunning = false; // Cleanup on unmount or when autoClosing changes
+  //   };
+  // }, [autoClosing]);
+  
 
-      console.log("All orders processed");
-      setbotIsScanning(false)
-      return "End_Closing";
-    } catch (error) {
-      console.error("Error in closing function:", error.message);
-      return "Error";
-    }
+
+  const fetchData = async () => {
+    await initializeData();
   };
-
-
-
-
-
-
-
 
   const executeTrade = async (pair, side, amount) => {
     try {
-      const response = await handleTrade(pair, side, Number(amount).toFixed(2));
+      const response = await handleTrade(pair, side, Number(amount).toFixed(0));
       if (response.success) {
         setToast({
           visible: true,
@@ -183,158 +160,62 @@ const BotTrading = () => {
 
 
 
-  useEffect(() => {
-    let isRunningClosing = false; // Flag to prevent overlapping cycles
+  const onPairFrameChange = async () => {
+    setLoading(true)
+    setMergedBuyOrders([])
+    setOrdersTotals([])
+    try {
+      const candles = await fetchCandleData(pair, frame); // Fetch H1 candles(pair,frame);
+      setCandlesH1(candles);
+      if (candles.length > 0) {
+ 
+        const latestPrice = await handleFetchPrice(pair);
+        setLatestPrice(latestPrice);
+        const mergedOrders = await handleFetchOrders(pair);
+        setMergedBuyOrders(mergedOrders);
+        const ordersTotals = await calculatePairProfit(pair);
+        setOrdersTotals(ordersTotals);
+        const trend = await calculateTrend(candles);
+        setDirection(trend.trendDirection);
+        settrendStrength(trend.trendStrength);
+        const srLevels = await calculateSupportResistanceFibonacci(pair, frame, candles);
+        setSrlevels(srLevels);
 
-    const handleClosing = async () => {
-      if (isRunningClosing) return;
-      isRunningClosing = true;
-
-      try {
-        const closeOrders = await closing(); // Run the closing function
-        console.log(closeOrders);
-      } catch (error) {
-        console.error("Error in handleClosing:", error.message);
       }
-
-      isRunningClosing = false;
-
-      // Wait 3 minutes before starting the next cycle
-      setTimeout(() => {
-        if (autoClosing) handleClosing();
-      }, 360000); // 3 minutes
-    };
-
-    if (autoClosing) {
-      handleClosing(); // Start the first cycle immediately
+    } catch (error) {
+      console.error("Error during data initialization:", error);
+    } finally {
+      setLoading(false)
     }
-
-    return () => {
-      isRunningClosing = false; // Cleanup on unmount or when autoClosing changes
-    };
-  }, [autoClosing]);
-
-  
-
-
-
-
-
-
-  const fetchData = async () => {
-    await initializeData();
-    const btcprice = await fetchPrice("BTC-USDC");
-    setBtcprice(btcprice);
   };
-
-  useEffect(() => {
-    fetchData()
-  }, []);
-
-  useEffect(() => {
-    let interval;
-    const fetchData = async () => {
-      await initializeData();
-    };
-    if (botActive) {
-      setLoading(true)
-      interval = setInterval(() => {
-        fetchData();
-        setLoading(false)
-      }, 60000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [botActive]);
-
-
-  useEffect(() => {
-    let interval;
-    const fetchData = async () => {
-      const btcprice = await fetchPrice("BTC-USDC");
-      setBtcprice(btcprice);
-
-    };
-    if (botActive) {
-      interval = setInterval(() => {
-        fetchData();
-      }, 10000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [botActive]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        const candles = await handleFetchData();
-        if (candles.length > 0) {
-          const latestPrice = await handleFetchPrice(pair);
-          setLatestPrice(latestPrice);
-          const mergedOrders = await handleFetchOrders(pair);
-          setMergedBuyOrders(mergedOrders);
-          const trend = await calculateTrend(candles);
-          setDirection(trend.trendDirection);
-          settrendStrength(trend.trendStrength);
-          // const rsiAdx = await calculateCompositeTrend(pair, candles);
-          // setRsiadx(rsiAdx);
-          const srLevels = await calculateSupportResistanceFibonacci(pair, frame, candles);
-          setSrlevels(srLevels);
-          const ordersTotals = await calculatePairProfit(pair);
-          setOrdersTotals(ordersTotals);
-        }
-      } catch (error) {
-        console.error("Error during data initialization:", error);
-      } finally {
-        setRefresh(false);
-        setLoading(false)
-      }
-    };
-
-    fetchData();
-  }, [pair, frame]);
 
   const initializeData = async () => {
     try {
       setLoading(true)
+      const btcprice = await fetchPrice("BTC-USDC");
+      setBtcprice(btcprice);
+       await onPairFrameChange()
       const data = await fetchAccounts();
-      const allOrdersTotals = await calculateAllPairProfits([], data);
-      setAllOrdersTotals(allOrdersTotals);
-      const accountTotals = await calculateAccountTotals(accounts);
-      setTotalAccounts(accountTotals);
-      const accountsList = data.accounts || [];
-      const withBalance = accountsList.filter(
-        (acc) => parseFloat(acc.available_balance.value) > 0
+      const usdcAccount = data.accounts.filter((account) =>
+        account.currency === "USDC"
       );
-      setAccounts(withBalance);
-      setAccountsData(data);
-      const priceData = {};
-      for (const account of withBalance) {
-        const currency = account.currency;
-        const priceUSD = await fetchPrice(`${currency}-USDC`);
-        priceData[currency] = { USDC: priceUSD };
-      }
-      setPrices(priceData);
+      const usdcbalance = usdcAccount[0].available_balance.value
+      const filterwithValues = await filterAndAddUSDPrices(data.accounts)
+      setAccounts(filterwithValues)
+      const above2dollars = filterwithValues.filter((account) => {
+        return account.usdcValue > 2; // Only include if balance in USD > 2
+      });
+      const allOrdersTotals = await calculateAllPairProfits([], above2dollars);
+      setAllOrdersTotals(allOrdersTotals);
+      const accountTotals = await sumAllUsdcAndBtcValues(filterwithValues, usdcbalance);
+      setTotalAccounts(accountTotals);
       setLoading(false)
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const handleFetchData = async () => {
-    try {
 
-      const candles = await fetchCandleData(pair, frame); // Fetch H1 candles
-      const reversedCandles = candles //.reverse();
-      setCandlesH1(reversedCandles);
-      return (reversedCandles)
-    } catch (error) {
-      console.error('Error fetching H1 data:', error.message);
-    }
-  };
 
   const generateCandleChartOptions = (supportResistance) => {
     if (candlesH1.length === 0) return {};
@@ -390,8 +271,77 @@ const BotTrading = () => {
     };
   };
 
-  const handleCloseOrder = (orderId) => alert(`Closing order: ${orderId}`);
+  const handleRefreshOrders = async () => {
+    await initializeData()
 
+  }
+  const closing = async () => {
+    setbotIsScanning(true)
+    try {
+      const data = await fetchAccounts();
+      const allOrdersTotals = await calculateAllPairProfits([], data.accounts);
+  
+      await Promise.all(
+        allOrdersTotals.map(async (order) => {
+ 
+          const currency = order.pair.replace("-USDC", "");
+          const fullBalanceValue = data.accounts.filter((acc) => acc.currency === currency)
+   
+          // console.log("PAIRBALANCE:"+fullBalanceValue[0].available_balance.value)
+          const adjustedAmount2 = fullBalanceValue[0].available_balance.value; // Remove 0.1%
+          const adjustedAmount = adjustedAmount2 * 0.999;
+     
+          if (order.profitPercentage > closepercent && adjustedAmount) {
+      
+            const SRS = await calculateSupportResistanceFibonacci(order.pair, frame);
+            const price = await fetchPrice(order.pair);
+            const reversals = await detectCandlestickReversalSignal(order.pair, frame);
+            const power = await calculateCompositeTrend(order.pair, frame);
+            const resistance = SRS.resistance;
+            const tolerance = resistance * 0.01; // 1% of resistance
+            if (
+              price > resistance - tolerance &&
+              price < resistance + tolerance &&
+              (reversals.signal === "Sell" || reversals.signal === "None") &&
+              power.H1 < 35 
+
+            ) {
+              console.log("EXECUTING CLOSING FOR " + order.pair);
+              await executeTrade(order.pair, "SELL", Number(adjustedAmount).toFixed(0));
+            
+            }
+       
+            
+            else {
+              console.log(order.pair + " -- ABORTING CLOSING " + "AT : " + price);
+              console.log("Candles Signal is : " + reversals.signal);
+              console.log("RESISTANCE:" + SRS.resistance);
+              console.log("Power - H1:" + power.H1);
+              console.log("Power - D1:" + power.D1);
+
+            }
+          }
+        if (order.profitPercentage > 10) {
+       
+          console.log("EXECUTING TOP CLOSING " + order.pair);
+          await executeTrade(order.pair, "SELL", Number(adjustedAmount).toFixed(0));
+
+        }
+          else{
+            console.log(order.pair+"UNDER PROFIX")
+    
+          }
+        })
+      );
+
+      console.log("All orders processed");
+      setbotIsScanning(false)
+      return "End_Closing";
+    } catch (error) {
+      console.error("Error in closing function:", error.message);
+      return "Error";
+    }
+  };
 
   const tradeNow = async () => {
     try {
@@ -414,7 +364,6 @@ const BotTrading = () => {
         try {
           // Execute scalping strategy for each product
           const result = await executeScalpingStrategy(product.product_id, timeframe);
-
           if (result.signal === 'Buy') {
             signalsList.push(result); // Add valid signal to the array
           }
@@ -649,8 +598,7 @@ const BotTrading = () => {
         try {
           const bidask = await fetchbidask(product.product_id)
           if (bidask.spread_bps < 20) {
-            const result = await calculateProbabilityBasedSignal(product.product_id, timeframe, candlesH1);
-
+            const result = await calculateProbabilityBasedSignal(product.product_id, timeframe);
             if (result && result.signal === 'Buy') {
               signalsList.push(result); // Add valid signal to the array
             }
@@ -662,7 +610,6 @@ const BotTrading = () => {
           console.error(`Error processing data for ${product.product_id}:`, error.message);
         }
       }
-
       setSignals(signalsList);
       setSignalsSell(signalsListSell);
       setbotIsScanning(false)
@@ -682,20 +629,17 @@ const BotTrading = () => {
   const handleRowClick = (currency, balance) => {
     setPair(`${currency}-USDC`)
     setPairtype(`${currency}-USDC`)
-    const adjustedAmount = balance * 0.999; // Remove 0.1%
+    const adjustedAmount = balance; // Remove 0.1%
     const roundedAmount = parseFloat(adjustedAmount.toFixed(2)); // Round to 2 decimal places
     setAmmount(roundedAmount); // Set the calculated amount
-
   };
 
   const handleOrderClick = (currency, balance) => {
     setPair(currency);
     setPairtype(currency);
-
     // Calculate adjusted amount
-    const adjustedAmount = balance * 0.999; // Remove 0.1%
+    const adjustedAmount = balance ; // Remove 0.1%
     const roundedAmount = parseFloat(adjustedAmount.toFixed(2)); // Round to 2 decimal places
-
     setAmmount(roundedAmount); // Set the calculated amount
   };
 
@@ -711,15 +655,8 @@ const BotTrading = () => {
 
         />
         <Col sm="3">
-          <h2>{pair}---{latestPrice} </h2>
-          <Row>
-            <Col>
-              <Row><h3> Res : {Srlevels && Srlevels.resistance}---Sup : {Srlevels && Srlevels.support}</h3> </Row>
-              <Row> <h5>Fibs 23.6% ---- UP:{Srlevels && Srlevels.extensions[0].level.toFixed(4)} DN: {Srlevels && Srlevels.retracements[0].level.toFixed(4)}</h5></Row>
-              <Row> <h5>Fibs 38.2% ---- UP:{Srlevels && Srlevels.extensions[1].level.toFixed(4)} DN: {Srlevels && Srlevels.retracements[1].level.toFixed(4)}</h5></Row>
-              <Row> <h5>Fibs 61% ---- UP:{Srlevels && Srlevels.extensions[2].level.toFixed(4)} DN: {Srlevels && Srlevels.retracements[2].level.toFixed(4)}</h5></Row>
-            </Col>
-          </Row>
+
+       
           <Row>
             <ADXGauge pair={pair} ></ADXGauge>
           </Row>
@@ -730,11 +667,12 @@ const BotTrading = () => {
             <TradePanel tradeDetails={{ pair: pair, amount: ammount }} refresh={() => fetchData()}></TradePanel>
           </Row>
           <Row>
-            <OrderTotalsTable orderTotals={AllOrdersTotals} onRowClick={handleOrderClick}></OrderTotalsTable>
+            <OrderTotalsTable handlerefresh={handleRefreshOrders}orderTotals={AllOrdersTotals} onRowClick={handleOrderClick}></OrderTotalsTable>
           </Row>
         </Col>
         <Col sm="5">
-          <h3>BTC/USD : {btcprice} -- USCD $: {usdc && usdc[0] && usdc[0].available_balance && Number(usdc[0].available_balance.value).toFixed(2)} {loading && <Spinner></Spinner>} </h3>
+        <Row style={{color:"blue"}}>   <h2>BTC/USD : {btcprice} </h2></Row>
+
           <Row style={{ marginTop: 30 }} className="mb-4">
             <Col sm="4">
               <Input
@@ -754,6 +692,11 @@ const BotTrading = () => {
             <Col sm="2">
               <Button color={autoClosing ? 'danger' : 'primary'} onClick={() => setAutoClosing(!autoClosing)}>
                 {autoClosing ? "Stop Auto Closing" : "Start Auto Closing"}
+              </Button>
+            </Col>
+            <Col sm="2">
+              <Button  onClick={() => closing()}>
+                CheckClose
               </Button>
             </Col>
             {/* <Col>
@@ -839,20 +782,16 @@ const BotTrading = () => {
           <Row style={{ marginTop: 10 }}>
             {botisScanning && <Spinneras ></Spinneras>}
           </Row>
-          <Row style={{ fontSize: 15 }}>
+          <Row style={{ fontSize: 15 ,color:"blue"}}>
 
-            <h3>BTC:{TotalAccounts && TotalAccounts.totalInBtc}-- inUSD:{TotalAccounts && TotalAccounts.totalInUsdc} -- USDC $:{usdc.length > 0 && Number(usdc && usdc[0].available_balance.value).toFixed(2)}</h3>
+            <h3>BTC:{TotalAccounts && TotalAccounts.totalInBtc}-- inUSD:{TotalAccounts && TotalAccounts.totalPocket} -- USDC $:{TotalAccounts && TotalAccounts.totalUSDC}</h3>
           </Row>
           <Row style={{ marginTop: 30 }}>
             <Col sm="12">
-              {/* Account table */}
-
               <AccountTable
                 accounts={accounts}
                 prices={prices}
-                // refresh={() => setRefresh(true)}
                 onRowClick={handleRowClick}
-                setusdc={(e) => setUsdc(e)}
               />
             </Col>
           </Row>
@@ -907,9 +846,30 @@ const BotTrading = () => {
 
         <Col sm="4">
 
-          <Row style={{ marginTop: 20 }}>
+          <Row style={{ marginTop: 20 ,color:"green" }}>
+            <Col sm="1">
+              {loading && <Spinner></Spinner>}
+            </Col>
+            <Col sm="6">
+              <h2>{pair}-{latestPrice}</h2>
+            </Col>
+            <Col sm="5">
             <TimeFrameToggle style={{ marginTop: 20 }} frame={frame} setFrame={setFrame} />
-            <ReactECharts option={generateCandleChartOptions()} style={{ height: 650 }} />
+            </Col>
+
+          </Row>
+          <Row>
+ 
+              <Row><h3> Res : {Srlevels && Srlevels.resistance}---Sup : {Srlevels && Srlevels.support}</h3> </Row>
+              <Row> <h5>Fibs 23.6% ---- UP:{Srlevels && Srlevels.extensions[0].level.toFixed(4)} DN: {Srlevels && Srlevels.retracements[0].level.toFixed(4)}</h5></Row>
+              <Row> <h5>Fibs 38.2% ---- UP:{Srlevels && Srlevels.extensions[1].level.toFixed(4)} DN: {Srlevels && Srlevels.retracements[1].level.toFixed(4)}</h5></Row>
+              <Row> <h5>Fibs 61% ---- UP:{Srlevels && Srlevels.extensions[2].level.toFixed(4)} DN: {Srlevels && Srlevels.retracements[2].level.toFixed(4)}</h5></Row>
+    
+          </Row>
+          <Row>
+
+            {/* <CandlestickChart style={{ height: 620 }} pair={pair}></CandlestickChart> */}
+          <ReactECharts option={generateCandleChartOptions()} style={{ height: 620 }} />
           </Row>
 
           <Row>
@@ -958,24 +918,7 @@ const BotTrading = () => {
                           <td>{order.amount.toFixed(2)}</td>
                           <td>${order.commission.toFixed(2)}</td>
                           <td style={{ color: isProfit ? 'green' : 'red' }}>
-                            {isProfit ? '+' : ''}
-                            {profitPercentage}%
-                          </td>
-                          <td style={{ color: isProfit ? 'green' : 'red' }}>
-
                             {nowprofitusd.toFixed(2)}
-                          </td>
-
-                          <td>
-                            {isProfit && (
-                              <Button
-                                color="success"
-                                size="sm"
-                                onClick={() => handleCloseOrder(order.orderId)}
-                              >
-                                Close Order
-                              </Button>
-                            )}
                           </td>
                         </tr>
                       );

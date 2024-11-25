@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import React, { useState ,useEffect} from "react";
 
-const OrderTotalsTable = ({ orderTotals, onRowClick }) => {
+const OrderTotalsTable = ({ orderTotals, onRowClick ,handlerefresh}) => {
   const [sortDirection, setSortDirection] = useState("desc"); // Default sort is descending
   const [sortedOrders, setSortedOrders] = useState(orderTotals);
 
+
+  useEffect(() => {
+setSortedOrders(orderTotals)
+  }, [orderTotals]);
   // Sorting logic
   const handleSort = () => {
     const newDirection = sortDirection === "asc" ? "desc" : "asc";
@@ -44,6 +48,9 @@ const OrderTotalsTable = ({ orderTotals, onRowClick }) => {
            <div style={{ marginBottom: "10px", textAlign: "right" }}>
         <button onClick={handleSort}>
           Sort by Profit ({sortDirection === "asc" ? "Ascending" : "Descending"})
+        </button>
+        <button onClick={handlerefresh}>
+          Refresh
         </button>
       </div>
       <div
