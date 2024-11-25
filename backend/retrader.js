@@ -17,6 +17,7 @@ const { calculateSupportResistanceFibonacci } = require('./indicators/taindicato
     fibonacciRange,
     pairProcessingDelay,
     candleProcessingDelay,
+    amountmultiplier
   } = config.retrading;
 
   // Helper delay function
@@ -82,7 +83,7 @@ const { calculateSupportResistanceFibonacci } = require('./indicators/taindicato
 
           // Check if the current price is within the range
           if (lowestBuy.currentPrice >= lowerBound && lowestBuy.currentPrice <= upperBound) {
-            const enterAmount = lowestBuy.lowestOrder.amount * 2;
+            const enterAmount = lowestBuy.lowestOrder.amount * amountmultiplier;
 
             console.log("Price is within the range. Proceeding with trade...");
             console.log(`Amount to Trade: ${enterAmount}`);

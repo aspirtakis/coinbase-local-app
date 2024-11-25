@@ -13,11 +13,11 @@ const scripts = [
 const runScript = (script) => {
   return new Promise((resolve, reject) => {
     console.log(`\n=== Starting Script: ${script} ===`);
-    const process = exec(`node ${script}`);
+    const process = exec(`node --no-warnings ${script}`);
 
     // Capture stdout
     process.stdout.on('data', (data) => {
-      console.log(`[${script}]: ${data}`);
+      console.log(`${data}`);
     });
 
     // Capture stderr
@@ -37,6 +37,7 @@ const runScript = (script) => {
     });
   });
 };
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 (async () => {
   while (true) {

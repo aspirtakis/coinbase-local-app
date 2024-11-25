@@ -61,6 +61,7 @@ const {
                         await delay(apiRateLimitDelay);
 
                         if (signal.signal === "Buy" && signal.probability > enterPropability) {
+                            console.log(signal.reasons)
                             const openbuys = await handleFetchOrdersBuys(signal.pair);
                             if (openbuys.length > 0) {
                                 console.log(`${signal.pair} -- ${openbuys.length} = THERE ARE OPEN BUYS Entering Re TRADING`);

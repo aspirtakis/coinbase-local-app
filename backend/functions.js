@@ -69,7 +69,7 @@ const fetchCandleData = async (productId, granularity) => {
   
 const fetchAccounts = async () => {
     try {
-      const accounts = await client.listAccounts({});
+      const accounts = await client.listAccounts({limit:250});
       return JSON.parse(accounts);
     } catch (error) {
       console.error('Error fetching accounts:', error.message);
@@ -333,8 +333,8 @@ const calculatePairProfit = async (pair) => {
   
         // Filtering conditions
         const isSignificantPriceChange = Math.abs(priceChange) > 5; // More than ±5% price change
-        const isHighVolume = Number(volume) > 100000000; // Minimum volume threshold
-        const isVolumeIncreasing = volumeChange > 5; // More than 10% increase in volume
+        const isHighVolume = volume > 800000; // Minimum volume threshold
+        const isVolumeIncreasing = volumeChange > 10; // More than 10% increase in volume
   
         return isSignificantPriceChange && isHighVolume && isVolumeIncreasing;
       });

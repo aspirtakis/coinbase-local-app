@@ -37,7 +37,7 @@ app.get('/api/accounts', async (req, res) => {
   try {
     
 
-    const accounts = await client.listAccounts({});
+    const accounts = await client.listAccounts({limit:250});
     res.json(accounts);
   } catch (error) {
     console.error('Error fetching accounts:', error.message);
